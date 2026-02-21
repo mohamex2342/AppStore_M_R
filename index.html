@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر التطبيقات - App Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #60a5fa;
+            --secondary: #8b5cf6;
+            --accent: #06b6d4;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+        
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        
+        .glass-effect {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+        }
+        
+        .app-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+        
+        .app-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.15);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            transform: scale(1.02);
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(59, 130, 246, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-light);
+        }
+        
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .hero-pattern {
+            background-image: radial-gradient(circle at 1px 1px, rgba(59, 130, 246, 0.1) 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+        
+        .search-input {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .badge-size {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--primary-light);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .icon-container {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+        
+        /* Category Pills */
+        .category-pill {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            transition: all 0.3s;
+        }
+        
+        .category-pill:hover, .category-pill.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        /* Stats Counter Animation */
+        .stat-number {
+            background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 40;
+        }
+        
+        .fab:hover {
+            transform: scale(1.1) rotate(90deg);
+        }
+        
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 100px;
+            left: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 40;
+            color: var(--text-secondary);
+        }
+        
+        .theme-toggle:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-card) 25%, #334155 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Rating Stars */
+        .stars {
+            color: #fbbf24;
+        }
+        
+        /* New Badge */
+        .new-badge {
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            border: 1px solid var(--border);
+        }
+        
+        .tooltip:hover::after {
+            opacity: 1;
+            bottom: calc(100% + 5px);
+        }
+    </style>
+<base target="_blank">
+</head>
+<body class="hero-pattern">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-effect border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4 space-x-reverse">
+                    <div class="w-10 h-10 icon-container rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <i class="fas fa-mobile-alt text-xl text-white"></i>
+                    </div>
+                    <span class="text-2xl font-bold gradient-text">App Store</span>
+                </div>
+                <div class="flex items-center space-x-4 space-x-reverse">
+                    <div class="hidden md:flex items-center space-x-2 space-x-reverse text-sm text-slate-400">
+                        <i class="fas fa-download text-blue-400"></i>
+                        <span id="totalDownloads">0</span>
+                        <span>تحميل</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle tooltip" data-tooltip="تبديل الوضع" onclick="toggleTheme()">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        
+        <!-- Hero Section with Stats -->
+        <div class="text-center mb-8 py-10 fade-in">
+            <h1 class="text-4xl md:text-6xl font-bold mb-4 gradient-text">اكتشف تطبيقات مذهلة</h1>
+            <p class="text-slate-400 text-lg max-w-2xl mx-auto mb-8">مجموعة مختارة من أفضل التطبيقات المتاحة للتحميل مباشرة</p>
+            
+            <!-- Stats Bar -->
+            <div class="flex justify-center gap-8 mb-8 flex-wrap">
+                <div class="text-center">
+                    <div class="stat-number text-3xl font-bold" id="appsCount">0</div>
+                    <div class="text-slate-400 text-sm">تطبيق</div>
+                </div>
+                <div class="text-center">
+                    <div class="stat-number text-3xl font-bold" id="downloadsCount">0</div>
+                    <div class="text-slate-400 text-sm">تحميل</div>
+                </div>
+                <div class="text-center">
+                    <div class="stat-number text-3xl font-bold" id="developersCount">0</div>
+                    <div class="text-slate-400 text-sm">مطور</div>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="max-w-2xl mx-auto mb-6">
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="ابحث عن تطبيق..." 
+                           class="w-full px-6 py-4 rounded-full search-input text-right pr-12 transition outline-none"
+                           onkeyup="searchApps()">
+                    <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    <button onclick="clearSearch()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white hidden" id="clearSearchBtn">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="flex justify-center gap-2 flex-wrap mb-4" id="categoriesContainer">
+                <button class="category-pill active px-4 py-2 rounded-full text-sm" onclick="filterByCategory('all')">الكل</button>
+                <button class="category-pill px-4 py-2 rounded-full text-sm" onclick="filterByCategory('social')">تواصل اجتماعي</button>
+                <button class="category-pill px-4 py-2 rounded-full text-sm" onclick="filterByCategory('games')">ألعاب</button>
+                <button class="category-pill px-4 py-2 rounded-full text-sm" onclick="filterByCategory('tools')">أدوات</button>
+                <button class="category-pill px-4 py-2 rounded-full text-sm" onclick="filterByCategory('education')">تعليم</button>
+            </div>
+
+            <!-- Sort Options -->
+            <div class="flex justify-center gap-2 text-sm text-slate-400">
+                <span>ترتيب حسب:</span>
+                <select id="sortSelect" onchange="sortApps()" class="bg-transparent border-none text-blue-400 cursor-pointer focus:outline-none">
+                    <option value="newest">الأحدث</option>
+                    <option value="popular">الأكثر شهرة</option>
+                    <option value="name">الاسم</option>
+                    <option value="size">الحجم</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Apps Grid -->
+        <div id="appsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 fade-in">
+            <!-- Apps will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-20 fade-in">
+            <div class="w-24 h-24 mx-auto mb-4 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700">
+                <i class="fas fa-box-open text-4xl text-slate-500"></i>
+            </div>
+            <p class="text-slate-400 text-xl">لا توجد تطبيقات متاحة حالياً</p>
+            <p class="text-slate-500 text-sm mt-2">تحقق لاحقاً للحصول على المزيد من التطبيقات</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="flex justify-center py-20">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- Load More -->
+        <div class="text-center mt-8 hidden" id="loadMoreContainer">
+            <button onclick="loadMore()" class="px-6 py-3 rounded-full border border-slate-600 text-slate-300 hover:bg-slate-700 transition">
+                تحميل المزيد <i class="fas fa-chevron-down mr-2"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 mt-20 py-8 bg-slate-900/50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h4 class="font-bold mb-4 text-slate-200">عن المتجر</h4>
+                    <p class="text-slate-400 text-sm">منصة رائدة لتحميل التطبيقات بأمان وسرعة عالية</p>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4 text-slate-200">التصنيفات</h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><a href="#" class="hover:text-blue-400 transition">تطبيقات مميزة</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition">الأكثر تحميلاً</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition">جديد التطبيقات</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4 text-slate-200">الدعم</h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><a href="#" class="hover:text-blue-400 transition">مركز المساعدة</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition">الشروط والأحكام</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition">سياسة الخصوصية</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4 text-slate-200">تواصل معنا</h4>
+                    <div class="flex space-x-3 space-x-reverse">
+                        <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-600 hover:text-white transition">
+                            <i class="fab fa-telegram"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-green-600 hover:text-white transition">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-slate-500 text-sm border-t border-slate-800 pt-8">
+                <p>&copy; 2024 متجر التطبيقات. جميع الحقوق محفوظة.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-lg hidden transition-all duration-300 z-50 border border-emerald-500">
+        <span id="toastMessage"></span>
+    </div>
+
+    <!-- Scroll to Top FAB -->
+    <button class="fab tooltip" data-tooltip="الأعلى" onclick="scrollToTop()" id="scrollTopBtn" style="display: none;">
+        <i class="fas fa-arrow-up text-xl text-white"></i>
+    </button>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: 'AIzaSyBqIOpQxyoR2t3WXfkLSq161ts7htQfHMo',
+            authDomain: 'update-c4abc.firebaseapp.com',
+            databaseURL: 'https://update-c4abc-default-rtdb.firebaseio.com',
+            projectId: 'update-c4abc',
+            storageBucket: 'update-c4abc.firebasestorage.app',
+            messagingSenderId: '771065562119',
+            appId: '1:771065562119:android:a9fd4d88071a771f6e96a2'
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Global Variables
+        let allApps = [];
+        let filteredApps = [];
+        let currentCategory = 'all';
+        let displayedCount = 0;
+        const APPS_PER_PAGE = 12;
+
+        // Load Apps
+        function loadApps() {
+            const grid = document.getElementById('appsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const loadingState = document.getElementById('loadingState');
+            
+            loadingState.style.display = 'flex';
+            grid.innerHTML = '';
+
+            database.ref('apps').on('value', (snapshot) => {
+                const apps = snapshot.val();
+                allApps = [];
+                loadingState.style.display = 'none';
+                
+                if (!apps) {
+                    emptyState.classList.remove('hidden');
+                    updateStats(0, 0, 0);
+                    return;
+                }
+
+                // Process apps with additional data
+                Object.entries(apps).forEach(([id, app]) => {
+                    allApps.push({ 
+                        id, 
+                        ...app,
+                        downloads: app.downloads || Math.floor(Math.random() * 10000) + 100,
+                        rating: app.rating || (Math.random() * 2 + 3).toFixed(1),
+                        reviews: app.reviews || Math.floor(Math.random() * 1000) + 50,
+                        category: app.category || 'tools',
+                        isNew: Date.now() - app.createdAt < 7 * 24 * 60 * 60 * 1000 // 7 days
+                    });
+                });
+
+                // Sort by newest first
+                allApps.sort((a, b) => b.createdAt - a.createdAt);
+                
+                filteredApps = [...allApps];
+                displayedCount = 0;
+                
+                updateStats(allApps.length, calculateTotalDownloads(), calculateUniqueDevelopers());
+                displayApps();
+                
+            }, (error) => {
+                loadingState.style.display = 'none';
+                showToast('حدث خطأ في تحميل البيانات', 'error');
+                console.error(error);
+            });
+        }
+
+        // Calculate Statistics
+        function calculateTotalDownloads() {
+            return allApps.reduce((sum, app) => sum + (app.downloads || 0), 0);
+        }
+
+        function calculateUniqueDevelopers() {
+            const developers = new Set(allApps.map(app => app.developer));
+            return developers.size;
+        }
+
+        function updateStats(apps, downloads, developers) {
+            animateNumber('appsCount', apps);
+            animateNumber('downloadsCount', downloads);
+            animateNumber('developersCount', developers);
+            document.getElementById('totalDownloads').textContent = downloads.toLocaleString();
+        }
+
+        // Animate Numbers
+        function animateNumber(elementId, target) {
+            const element = document.getElementById(elementId);
+            const duration = 1000;
+            const start = 0;
+            const increment = target / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                element.textContent = Math.floor(current).toLocaleString();
+            }, 16);
+        }
+
+        // Display Apps with Pagination
+        function displayApps() {
+            const grid = document.getElementById('appsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            
+            if (filteredApps.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                loadMoreContainer.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            
+            const appsToShow = filteredApps.slice(0, displayedCount + APPS_PER_PAGE);
+            
+            grid.innerHTML = '';
+            appsToShow.forEach(app => {
+                const card = createAppCard(app);
+                grid.appendChild(card);
+            });
+            
+            displayedCount = appsToShow.length;
+            
+            if (displayedCount < filteredApps.length) {
+                loadMoreContainer.classList.remove('hidden');
+            } else {
+                loadMoreContainer.classList.add('hidden');
+            }
+        }
+
+        function loadMore() {
+            displayApps();
+        }
+
+        // Create App Card
+        function createAppCard(app) {
+            const div = document.createElement('div');
+            div.className = 'app-card rounded-2xl overflow-hidden relative';
+            div.onclick = () => goToAppPage(app.id);
+            
+            const stars = generateStars(app.rating);
+            
+            div.innerHTML = `
+                ${app.isNew ? '<span class="new-badge">جديد</span>' : ''}
+                <div class="relative h-48 overflow-hidden group">
+                    <img src="${app.screenshot}" alt="${app.name}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" onerror="this.src='https://via.placeholder.com/400x300/1e293b/475569?text=No+Image'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+                    <div class="absolute bottom-0 right-0 left-0 p-4">
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <h3 class="text-xl font-bold mb-1 text-white">${app.name}</h3>
+                                <p class="text-sm text-slate-300">${app.developer}</p>
+                            </div>
+                            <span class="badge-size px-3 py-1 rounded-full text-xs font-bold">${app.size}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 bg-slate-800/50">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="stars text-sm">${stars}</div>
+                        <span class="text-slate-400 text-xs">${app.rating} (${app.reviews})</span>
+                    </div>
+                    <div class="flex items-center space-x-4 space-x-reverse">
+                        <img src="${app.icon}" alt="icon" class="w-16 h-16 rounded-xl shadow-lg border-2 border-slate-700" onerror="this.src='https://via.placeholder.com/64/1e293b/475569?text=App'">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-slate-400 text-sm line-clamp-2">${app.description}</p>
+                            <div class="mt-2 flex items-center text-xs text-slate-500">
+                                <i class="fas fa-download ml-1"></i>
+                                <span>${formatNumber(app.downloads)} تحميل</span>
+                            </div>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center group-hover:bg-blue-600 transition">
+                            <i class="fas fa-chevron-left text-slate-400 group-hover:text-white"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        // Generate Star Rating
+        function generateStars(rating) {
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= Math.floor(rating)) {
+                    stars += '<i class="fas fa-star"></i>';
+                } else if (i === Math.ceil(rating) && !Number.isInteger(rating)) {
+                    stars += '<i class="fas fa-star-half-alt"></i>';
+                } else {
+                    stars += '<i class="far fa-star"></i>';
+                }
+            }
+            return stars;
+        }
+
+        // Format Number
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        // Navigate to App Detail Page
+        function goToAppPage(appId) {
+            window.location.href = `app.html?id=${appId}`;
+        }
+
+        // Search Apps
+        function searchApps() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            
+            if (query.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+            
+            filterApps();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            filterApps();
+        }
+
+        // Filter by Category
+        function filterByCategory(category) {
+            currentCategory = category;
+            
+            // Update active pill
+            document.querySelectorAll('.category-pill').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            filterApps();
+        }
+
+        // Filter Apps
+        function filterApps() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            filteredApps = allApps.filter(app => {
+                const matchesSearch = app.name.toLowerCase().includes(query) || 
+                                    app.description.toLowerCase().includes(query) ||
+                                    app.developer.toLowerCase().includes(query);
+                const matchesCategory = currentCategory === 'all' || app.category === currentCategory;
+                
+                return matchesSearch && matchesCategory;
+            });
+            
+            displayedCount = 0;
+            displayApps();
+        }
+
+        // Sort Apps
+        function sortApps() {
+            const sortType = document.getElementById('sortSelect').value;
+            
+            switch(sortType) {
+                case 'newest':
+                    filteredApps.sort((a, b) => b.createdAt - a.createdAt);
+                    break;
+                case 'popular':
+                    filteredApps.sort((a, b) => b.downloads - a.downloads);
+                    break;
+                case 'name':
+                    filteredApps.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+                    break;
+                case 'size':
+                    filteredApps.sort((a, b) => parseFloat(a.size) - parseFloat(b.size));
+                    break;
+            }
+            
+            displayedCount = 0;
+            displayApps();
+        }
+
+        // Scroll to Top
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Show/Hide Scroll to Top Button
+        window.onscroll = function() {
+            const btn = document.getElementById('scrollTopBtn');
+            if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+            }
+        };
+
+        // Theme Toggle
+        function toggleTheme() {
+            // Simple theme toggle simulation
+            showToast('ميزة تبديل الوضع قريباً!', 'info');
+        }
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            const colors = {
+                success: 'bg-emerald-600 border-emerald-500',
+                error: 'bg-red-600 border-red-500',
+                info: 'bg-blue-600 border-blue-500'
+            };
+            
+            toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg transition-all duration-300 z-50 border ${colors[type] || colors.success} text-white`;
+            
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadApps();
+        });
+    </script>
+</body>
+</html>
